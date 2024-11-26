@@ -14,7 +14,7 @@ build/
 *.egg-info/
 
 # Large data files
-data/realtor/RDC_Inventory_Core_Metrics_County_History.csv
+# data/realtor/RDC_Inventory_Core_Metrics_County_History.csv
 data/realtor/RDC_Inventory_Core_Metrics_Zip_History.csv
 
 # IDE specific files
