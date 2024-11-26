@@ -76,11 +76,12 @@ CHART_DEFAULTS = {
     'color_scheme': 'yellowgreenblue'
 }
 
-MAP_STYLES = {
-    'metro': {'stroke': 'blue', 'strokeWidth': 0.5},
-    'state': {'stroke': 'black', 'strokeWidth': 1},
-    'highlight': {'stroke': 'red', 'strokeWidth': 3}
-}
+# MAP_STYLES = {
+#     'county': {'stroke': 'black', 'strokeWidth': 0.5},    
+#     'metro': {'stroke': 'blue', 'strokeWidth': 0.5},
+#     'state': {'stroke': 'black', 'strokeWidth': 0.5},
+#     'highlight': {'stroke': 'red', 'strokeWidth': 2}
+# }
 
 ################################################################################
 
@@ -917,7 +918,7 @@ def create_choropleth(
         base = alt.Chart(
             alt.Data(values=geometries['metros']['features'])
         ).mark_geoshape(
-            stroke='blue',
+            stroke='gray',
             strokeWidth=0.5
         ).encode(
             color=alt.Color(
@@ -925,7 +926,7 @@ def create_choropleth(
                 title=title,
                 scale=alt.Scale(
                     scheme=color_scheme,
-                    domain=[min_val, max_val]  # Using validated values
+                    domain=[min_val, max_val]
                 ),
                 legend=None
             ),
@@ -935,7 +936,7 @@ def create_choropleth(
             ]
         ).transform_lookup(
             lookup='id',
-            from_=alt.LookupData(valid_data, 'id', [metric, 'cbsa_title'])  # Using validated data
+            from_=alt.LookupData(valid_data, 'id', [metric, 'cbsa_title'])
         )
 
         # Add highlight for selected area if provided
@@ -981,7 +982,7 @@ def create_choropleth(
 
         # Create base map
         base = alt.Chart(geo_config['geometry']).mark_geoshape(
-            stroke='black',
+            stroke='lightgray' if level == 'county' else 'black',
             strokeWidth=1
         ).encode(
             color=alt.Color(
@@ -1002,23 +1003,33 @@ def create_choropleth(
             from_=alt.LookupData(df_latest, 'id', [metric, geo_config['name_field']])
         )
 
-        # Add highlight for selected area
+        # If we're at county level, add state boundaries on top
+        if level == 'county':
+            state_borders = alt.Chart(geometries['states']).mark_geoshape(
+                stroke='black',
+                strokeWidth=1,
+                fill=None
+            )
+            base = alt.layer(base, state_borders)
+
         # Add highlight for selected area
         if selected_id is not None:
             highlight_stroke_width = 0.5 if level == 'country' else 3
-            highlight = base.transform_filter(
-                f"datum.id === {selected_id}"
-            ).mark_geoshape(
+            highlight = alt.Chart(geo_config['geometry']).mark_geoshape(
                 stroke='red',
                 strokeWidth=highlight_stroke_width
+            ).encode(
+                color=alt.value(None)  # transparent fill
+            ).transform_filter(
+                f"datum.id === {selected_id}"
             )
             base = alt.layer(base, highlight)
 
         # Add label for country map
         if level == 'country':
             label_data = df_latest[['id', metric, geo_config['name_field']]].copy()
-            label_data['lat'] = 40  # Approximate center latitude for the US
-            label_data['lon'] = -98  # Approximate center longitude for the US
+            label_data['lat'] = 40
+            label_data['lon'] = -98
 
             label = alt.Chart(label_data).mark_text(
                 align='center',
