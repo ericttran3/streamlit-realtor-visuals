@@ -196,7 +196,14 @@ def calculate_changes(df: pd.DataFrame, metric: str, view_type: str) -> pd.DataF
     if view_type == "MoM":
         df[metric] = df[metric].pct_change() * 100
     elif view_type == "YoY":
-        df[metric] = (df[metric] - df[metric].shift(12)) / df[metric].shift(12) * 100
+        # Calculate year-over-year change only where we have data from previous year
+        df['prev_year'] = df[metric].shift(12)
+        df[metric] = np.where(
+            df['prev_year'].notna(),
+            ((df[metric] - df['prev_year']) / df['prev_year']) * 100,
+            np.nan
+        )
+        df = df.drop('prev_year', axis=1)
     elif view_type == "Since 2019":
         baseline_2019 = df[df['date'].dt.year == 2019].copy()
         baseline_2019['month'] = baseline_2019['date'].dt.month
@@ -360,7 +367,7 @@ def create_change_bar_chart(df: pd.DataFrame, metric: str, title: str, geo_name:
 
     # Base bar chart
     bars = alt.Chart(df).mark_bar(
-        width=2  # Adjust bar width as needed
+        width=5  # Adjust bar width as needed
         ).encode(
         x=alt.X('date:T', title=None),
         y=alt.Y(
@@ -644,22 +651,45 @@ def create_seasonality_chart(df: pd.DataFrame, metric: str, title: str, geo_name
 ## Dual Axis Chart
 def create_combo_chart(df: pd.DataFrame, metric: str, title: str, geo_name: str, comparison_type: str) -> alt.Chart:
     """Create a combo chart with metric value line and comparison bars."""
-    df = df.copy()
+    df = df.copy().sort_values('date')  # Ensure data is sorted by date
     
     # Calculate comparison values based on type
     if comparison_type == "MoM":
-        df['comparison'] = df[metric].pct_change() * 100
+        # First sort by date and then calculate the change
+        df['previous'] = df[metric].shift(1)
+        df['comparison'] = df.apply(
+            lambda row: ((row[metric] - row['previous']) / row['previous'] * 100) 
+            if pd.notnull(row['previous']) else None, 
+            axis=1
+        )
         comparison_label = "MoM Change (%)"
     elif comparison_type == "YoY":
-        df['comparison'] = (df[metric] - df[metric].shift(12)) / df[metric].shift(12) * 100
+        df['previous'] = df[metric].shift(12)
+        df['comparison'] = df.apply(
+            lambda row: ((row[metric] - row['previous']) / row['previous'] * 100)
+            if pd.notnull(row['previous']) else None,
+            axis=1
+        )
         comparison_label = "YoY Change (%)"
     elif comparison_type == "Since 2019":
         baseline_2019 = df[df['date'].dt.year == 2019].copy()
         baseline_2019['month'] = baseline_2019['date'].dt.month
         df['month'] = df['date'].dt.month
-        df = df.merge(baseline_2019[['month', metric]], on='month', suffixes=('', '_2019'))
+        df = df.merge(
+            baseline_2019[['month', metric]], 
+            on='month', 
+            suffixes=('', '_2019')
+        )
         df['comparison'] = ((df[metric] - df[f'{metric}_2019']) / df[f'{metric}_2019']) * 100
         comparison_label = "Change Since 2019 (%)"
+    
+    # Drop the temporary columns if they exist
+    if 'previous' in df.columns:
+        df = df.drop('previous', axis=1)
+        
+    # For debugging
+    print(f"Latest few rows for {metric}:")
+    print(df[['date', metric, 'comparison']].tail())
     
     # Selection for hover interaction
     nearest = alt.selection_single(
@@ -699,7 +729,7 @@ def create_combo_chart(df: pd.DataFrame, metric: str, title: str, geo_name: str,
     )
     
     # Comparison bars
-    bars = base.mark_bar(opacity=0.3, width=2).encode(
+    bars = base.mark_bar(opacity=0.3, width=2.5).encode(
         y=alt.Y(
             'comparison:Q',
             title=None,
@@ -1105,6 +1135,11 @@ def render_overview():
         label_visibility="collapsed"
     ).lower()
     
+    # Show coming soon message for Zip level and return early
+    if selected_geo_level == 'zip':
+        display_coming_soon()
+        return
+        
     col1, col2, col3 = st.columns([3, 3, 5], gap="small")
 
     with col1:
@@ -1137,7 +1172,7 @@ def render_overview():
     with col2:
         chart_type = st.selectbox(
             "Chart Type",
-            options=["Time Series", "Seasonality", "Metrics", "Map"]
+            options=["Time Series", "Seasonality", "Metrics", "Table", "Map"]
         )
     
     with col3:
@@ -1174,9 +1209,12 @@ def render_overview():
                 return
             metric_data[metric] = data
 
-        # Handle metrics view
-        if chart_type == "Metrics":
-            st.write(f"#### Current Metrics for {display_name}")
+        # Handle different chart types
+        if chart_type == "Table":
+            create_metrics_table(metric_data, display_name, comparison_type)
+            return
+        elif chart_type == "Metrics":
+            st.write(f"#### Current Metrics for {display_name} ({comparison_type})")
             render_metrics_grid(
                 metric_data, 
                 display_name, 
@@ -1185,13 +1223,14 @@ def render_overview():
             st.markdown("---")
             return
 
-        # Render regular charts
+        # Render regular charts (Time Series and Seasonality)
         for i in range(0, len(METRICS), 2):
             col1, col2 = st.columns(2, gap="small")
             
             # First chart
             metric, title = METRICS[i]
             with col1:
+                chart = None  # Initialize chart variable
                 if chart_type == "Time Series":
                     if comparison_type == "Value":
                         chart = create_area_chart(metric_data[metric], metric, title, display_name)
@@ -1199,12 +1238,15 @@ def render_overview():
                         chart = create_combo_chart(metric_data[metric], metric, title, display_name, comparison_type)
                 elif chart_type == "Seasonality":
                     chart = create_seasonality_chart(metric_data[metric], metric, title, display_name)
-                st.altair_chart(chart, use_container_width=True)
+                
+                if chart:  # Only display if chart was created
+                    st.altair_chart(chart, use_container_width=True)
             
-            # Second chart
+            # Second chart (if it exists)
             if i + 1 < len(METRICS):
                 metric, title = METRICS[i + 1]
                 with col2:
+                    chart = None  # Initialize chart variable
                     if chart_type == "Time Series":
                         if comparison_type == "Value":
                             chart = create_area_chart(metric_data[metric], metric, title, display_name)
@@ -1212,7 +1254,9 @@ def render_overview():
                             chart = create_combo_chart(metric_data[metric], metric, title, display_name, comparison_type)
                     elif chart_type == "Seasonality":
                         chart = create_seasonality_chart(metric_data[metric], metric, title, display_name)
-                    st.altair_chart(chart, use_container_width=True)
+                    
+                    if chart:  # Only display if chart was created
+                        st.altair_chart(chart, use_container_width=True)
 
     except Exception as e:
         st.error(f"Error loading visualizations: {str(e)}")
@@ -1258,3 +1302,106 @@ def validate_metric_data(df: pd.DataFrame, metric: str) -> Tuple[pd.DataFrame, O
         return valid_data, None
     except Exception as e:
         return None, f"Error processing {metric}: {str(e)}"
+
+def create_metrics_table(metric_data: dict, display_name: str, comparison_type: str) -> pd.DataFrame:
+    """Create a table showing all metrics for the selected geography."""
+    # Get the latest date from any metric (they should all have the same latest date)
+    latest_date = metric_data[list(metric_data.keys())[0]]['date'].max()
+    
+    # Display header with date
+    st.markdown(f"#### Current Metrics for {display_name} ({comparison_type})")
+    # st.markdown(f"*as of {latest_date.strftime('%B %Y')}*")
+    
+    # Initialize lists to store our data
+    rows = []
+    
+    # Process each metric
+    for metric, title in METRICS:
+        df = metric_data[metric]
+        latest_date = df['date'].max()
+        latest_value = df[df['date'] == latest_date][metric].iloc[0]
+        
+        # Get previous value based on comparison type
+        if comparison_type != "Value":
+            if comparison_type == "MoM":
+                prev_date = latest_date - pd.DateOffset(months=1)
+            elif comparison_type == "YoY":
+                prev_date = latest_date - pd.DateOffset(years=1)
+            elif comparison_type == "Since 2019":
+                prev_date = df[df['date'].dt.year == 2019]['date'].max()
+            
+            prev_date = df['date'].where(df['date'] <= prev_date).max()
+            prev_value = df[df['date'] == prev_date][metric].iloc[0] if prev_date else None
+            
+            # Calculate raw delta
+            if prev_value and prev_value != 0:
+                raw_delta = latest_value - prev_value
+            else:
+                raw_delta = None
+            
+            # Format values
+            formatted_value, pct_change, _ = create_metrics_view(
+                metric_data[metric],
+                metric,
+                title,
+                comparison_type
+            )
+            
+            # Format previous value and delta using the same formatting as current value
+            if 'price' in metric:
+                formatted_prev = f"${prev_value:,.0f}" if prev_value is not None else "N/A"
+                formatted_delta = f"${raw_delta:+,.0f}" if raw_delta is not None else "N/A"
+            elif metric == 'pending_ratio':
+                formatted_prev = f"{prev_value:.1f}%" if prev_value is not None else "N/A"
+                formatted_delta = f"{raw_delta:+.1f}%" if raw_delta is not None else "N/A"
+            else:
+                formatted_prev = f"{prev_value:,.0f}" if prev_value is not None else "N/A"
+                formatted_delta = f"{raw_delta:+,.0f}" if raw_delta is not None else "N/A"
+            
+            row = {
+                'Metric': title,
+                'Current Value': formatted_value,
+                f'Previous Value ({comparison_type})': formatted_prev,
+                'Change': formatted_delta,
+                'Change (%)': pct_change
+            }
+        else:
+            # Just show current value for "Value" comparison type
+            formatted_value, _, _ = create_metrics_view(
+                metric_data[metric],
+                metric,
+                title,
+                comparison_type
+            )
+            row = {
+                'Metric': title,
+                'Current Value': formatted_value
+            }
+            
+        rows.append(row)
+    
+    # Create DataFrame
+    df = pd.DataFrame(rows)
+    
+    # Display the table with styling
+    if comparison_type != "Value":
+        # Style both Change columns
+        def color_change(val):
+            if isinstance(val, str):
+                if val == "N/A":
+                    return ''
+                if '%' in val:
+                    value = float(val.strip('%+-'))
+                else:
+                    value = float(val.strip('$+').replace(',', ''))
+                if value > 0:
+                    return 'color: #52be80'  # Green for positive
+                elif value < 0:
+                    return 'color: #ec7063'  # Red for negative
+            return ''
+        
+        # Apply the styling to both Change columns
+        styled_df = df.style.applymap(color_change, subset=['Change', 'Change (%)'])
+        st.dataframe(styled_df, use_container_width=True)
+    else:
+        st.dataframe(df, use_container_width=True)
