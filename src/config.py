@@ -44,8 +44,8 @@ GEO_MAPPINGS = {
         "display_name": "Country"
     },
     "State": {
-        "id_col": "state_id",  # This should match your CSV column name
-        "name_col": "state",   # This should match your CSV column name
+        "id_col": "state_id",  
+        "name_col": "state",   
         "display_name": "State"
     },
     "Metro": {
