@@ -1,0 +1,51 @@
+# Python virtual environment
+.venv/
+venv/
+ENV/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Large data files
+data/realtor/RDC_Inventory_Core_Metrics_County_History.csv
+data/realtor/RDC_Inventory_Core_Metrics_Zip_History.csv
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Environment variables
+.env
+.env.local
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Logs
+*.log
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Streamlit specific
+.streamlit/secrets.toml
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Local development files
+local_settings.py
