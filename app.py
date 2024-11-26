@@ -8,20 +8,35 @@ def main():
     st.set_page_config(
         page_title="Realtor.com Market Insights",
         page_icon="🏠",
-        layout="wide",
+        layout="centered",
         menu_items={
             'Get Help': 'mailto:ericttran3@gmail.com',
             'Report a bug': 'mailto:ericttran3@gmail.com',
         }
     )
     
+    # Add custom CSS for content width
+    st.markdown("""
+        <style>
+            .block-container {
+                max-width: 1000px;
+                padding-top: 2rem;
+                padding-bottom: 2rem;
+                padding-left: 2rem;
+                padding-right: 2rem;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+    
     # Initialize session state
     if 'data_loader' not in st.session_state:
         st.session_state.data_loader = DataLoader()
     
     # Title
-    st.title("Realtor.com Market Insights")
-    st.markdown("Analyze real estate trends across different geographic levels using data from realtor.com")
+    st.header("Realtor.com Market Insights")
+    st.markdown("""
+        Analyze real estate trends across different geographic levels using data from <a href="https://realtor.com/research/data" target="_blank" class="title-link">realtor.com</a>
+    """, unsafe_allow_html=True)
     
     # Navigation tabs
     tab_overview, tab_details, tab_compare, tab_map, tab_analyze = st.tabs([

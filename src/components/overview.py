@@ -37,6 +37,22 @@ METRICS = [
     ("price_reduced_count", "Price Reduced Count"),
 ]
 
+# Define tooltips for each metric
+METRIC_TOOLTIPS = {
+        "active_listing_count": "The count of active listings within the specified geography during the specified month. The active listing count tracks the number of for sale properties on the market, excluding pending listings where a pending status is available. This is a snapshot measure of how many active listings can be expected on any given day of the specified month.",
+        "new_listing_count": "The count of newly listed properties for sale during the specified month. This is a flow measure of how many new listings hit the market during the month.",
+        "pending_listing_count": "The count of pending listings within the specified geography during the specified month. The pending listing count tracks the number of properties that are under contract but have not yet sold.",
+        "total_listing_count": "The total count of all properties listed for sale, including both active and pending listings.",
+        "pending_ratio": "The ratio of pending listings to active listings, expressed as a percentage.",
+        "median_listing_price": "The median price of active listings within the specified geography during the specified month.",
+        "average_listing_price": "The average price of active listings within the specified geography during the specified month.",
+        "median_square_feet": "The median square footage of active listings within the specified geography during the specified month.",
+        "median_listing_price_per_square_foot": "The median price per square foot of active listings within the specified geography during the specified month.",
+        "median_days_on_market": "The median number of days active listings have been on the market (from list date) within the specified geography during the specified month.",
+        "price_increased_count": "The count of listings that had their price increased during the specified month.",
+        "price_reduced_count": "The count of listings that had their price reduced during the specified month."
+    }
+
 # Geo Mappings
 GEO_MAPPINGS = {
     "Country": {
