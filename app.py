@@ -2,16 +2,17 @@
 import streamlit as st
 from src.data_loader import DataLoader
 from src.components.overview import render_overview
-# from src.components.details import render_details
-# from src.components.compare import render_compare
-# from src.components.map import render_map
 from src.config import GEO_LEVELS, GEO_MAPPINGS, STATE_TO_FIPS
 
 def main():
     st.set_page_config(
         page_title="Realtor.com Market Insights",
         page_icon="🏠",
-        # layout="wide"
+        layout="wide",
+        menu_items={
+            'Get Help': 'mailto:ericttran3@gmail.com',
+            'Report a bug': 'mailto:ericttran3@gmail.com',
+        }
     )
     
     # Initialize session state
