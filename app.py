@@ -44,8 +44,8 @@ def main():
     st.caption("Analyze real estate trends across different geographic levels using weekly and monthly data from realtor.com!")
     
     # Navigation tabs
-    tab_overview, tab_details, tab_compare, tab_map, tab_analyze, tab_support = st.tabs([
-        "Overview", "Details", "Compare", "Map", "Analyze", "Support"
+    tab_overview, tab_details, tab_compare, tab_map, tab_analyze = st.tabs([
+        "Overview", "Details", "Compare", "Map", "Analyze"
     ])
     
     # Overview Tab
@@ -94,14 +94,14 @@ def main():
         """, unsafe_allow_html=True)                
 
     # Support Tab
-    with tab_support:
-        # render_support()
-        st.markdown("""
-            <div style='padding: 2rem; background-color: #f8f9fa; border-radius: 0.5rem; text-align: center;'>
-                <h3 style='color: #6c757d;'>🚧 Coming Soon! 🚧</h3>
-                <p style='color: #6c757d;'>We're working on adding this feature. Stay tuned for updates!</p>
-            </div>
-        """, unsafe_allow_html=True)                  
+    # with tab_support:
+    #     # render_support()
+    #     st.markdown("""
+    #         <div style='padding: 2rem; background-color: #f8f9fa; border-radius: 0.5rem; text-align: center;'>
+    #             <h3 style='color: #6c757d;'>🚧 Coming Soon! 🚧</h3>
+    #             <p style='color: #6c757d;'>We're working on adding this feature. Stay tuned for updates!</p>
+    #         </div>
+    #     """, unsafe_allow_html=True)                  
 
 if __name__ == "__main__":
     main()

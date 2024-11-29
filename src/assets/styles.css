@@ -1,0 +1,131 @@
+.st-cb {
+    padding-top: 0rem !important;
+}
+
+html {
+    font-size: 14px;
+}
+
+h3 {
+    font-family: "Source Sans Pro", sans-serif;
+    font-weight: 600;
+    font-size: 1.75rem;
+    letter-spacing: -0.005em;
+    padding: 1rem 0px 1rem;
+    margin: 0px;
+    line-height: 1.2;
+}
+
+p, ol, ul, dl {
+    margin: 0px 0px 1.2rem;
+    padding: 0px;
+    font-size: 1rem;
+    font-weight: 400;
+}
+
+.p-6 {
+    padding: 1rem;
+}
+
+.st-e3 {
+    margin-right: 0.3rem;
+}
+
+.st-e4 {
+    padding-right: 0.25rem;
+}
+
+.st-cj {
+    padding-right: 0rem;
+}
+
+.st-ci {
+    margin-right: 0.5rem;
+}
+
+.st-ew {
+    column-gap: 0px;
+}
+
+.st-emotion-cache-ocqkz7 {
+    display: flex;
+    flex-wrap: wrap;
+    -webkit-box-flex: 1;
+    flex-grow: 1;
+    -webkit-box-align: stretch;
+    align-items: stretch;
+    gap: 0.5rem;
+}
+
+.st-emotion-cache-1sbzx8r {
+    width: 328px;
+    position: relative;
+    display: flex;
+    flex: 1 1 0%;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.st-emotion-cache-okmazl {
+    width: 944px;
+    position: relative;
+    display: flex;
+    flex: 1 1 0%;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.st-emotion-cache-1g9he0z {
+    display: inline-flex;
+    -webkit-box-align: center;
+    align-items: center;
+    -webkit-box-pack: center;
+    justify-content: center;
+    margin: 0px -1px 0px 0px;
+    width: auto;
+    cursor: pointer;
+    user-select: none;
+    background: rgba(255, 75, 75, 0.1);
+    border: 1px solid rgb(255, 75, 75);
+    font-size: 14px;
+    line-height: 1.6;
+    font-weight: 400;
+    height: 2rem;
+    min-height: 2rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0.25rem 0.75rem;
+    border-radius: 0px;
+    flex: 1 0 fit-content;
+    max-width: 100%;
+    color: rgb(255, 75, 75);
+    z-index: 1;
+}
+
+.st-emotion-cache-13jrk4y {
+    display: inline-flex;
+    -webkit-box-align: center;
+    align-items: center;
+    -webkit-box-pack: center;
+    justify-content: center;
+    margin: 0px -1px 0px 0px;
+    color: inherit;
+    width: auto;
+    cursor: pointer;
+    user-select: none;
+    background: rgb(255, 255, 255);
+    border: 1px solid rgba(49, 51, 63, 0.2);
+    font-size: 14px;
+    line-height: 1.6;
+    font-weight: 400;
+    height: 2rem;
+    min-height: 2rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0.25rem 0.75rem;
+    border-radius: 0px;
+    flex: 1 0 fit-content;
+    max-width: 100%;
+}
