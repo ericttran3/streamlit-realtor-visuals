@@ -1,7 +1,9 @@
 # app.py
 import streamlit as st
+import streamlit_shadcn_ui as ui
 from src.data_loader import DataLoader
-from src.components.overview import render_overview
+from src.components.overview import render_overview, render_support
+from src.components.details import render_details
 from src.config import GEO_LEVELS, GEO_MAPPINGS, STATE_TO_FIPS
 
 def main():
@@ -33,14 +35,17 @@ def main():
         st.session_state.data_loader = DataLoader()
     
     # Title
-    st.header("Realtor.com Market Insights")
-    st.markdown("""
-        Analyze real estate trends across different geographic levels using data from <a href="https://realtor.com/research/data" target="_blank" class="title-link">realtor.com</a>
-    """, unsafe_allow_html=True)
+    st.subheader("Realtor.com Market Insights")
+    # st.markdown("""
+    #     Analyze real estate trends across different geographic levels using weekly and monthly data from <a href="https://realtor.com/research/data" target="_blank" class="title-link">realtor.com</a>
+    # """, unsafe_allow_html=True)
+
+    # ui.badges(badge_list=[("shadcn", "default"), ("in", "secondary"), ("streamlit", "destructive")], class_name="flex gap-2", key="main_badges1")
+    st.caption("Analyze real estate trends across different geographic levels using weekly and monthly data from realtor.com!")
     
     # Navigation tabs
-    tab_overview, tab_details, tab_compare, tab_map, tab_analyze = st.tabs([
-        "Overview", "Details", "Compare", "Map", "Analyze"
+    tab_overview, tab_details, tab_compare, tab_map, tab_analyze, tab_support = st.tabs([
+        "Overview", "Details", "Compare", "Map", "Analyze", "Support"
     ])
     
     # Overview Tab
@@ -49,13 +54,7 @@ def main():
     
     # Details Tab
     with tab_details:
-        # render_details()
-        st.markdown("""
-            <div style='padding: 2rem; background-color: #f8f9fa; border-radius: 0.5rem; text-align: center;'>
-                <h3 style='color: #6c757d;'>🚧 Coming Soon! 🚧</h3>
-                <p style='color: #6c757d;'>We're working on adding this feature. Stay tuned for updates!</p>
-            </div>
-        """, unsafe_allow_html=True)
+        render_details()
 
     
     # Compare Tab
@@ -87,6 +86,16 @@ def main():
                 <p style='color: #6c757d;'>We're working on adding this feature. Stay tuned for updates!</p>
             </div>
         """, unsafe_allow_html=True)                
+
+    # Support Tab
+    with tab_support:
+        # render_support()
+        st.markdown("""
+            <div style='padding: 2rem; background-color: #f8f9fa; border-radius: 0.5rem; text-align: center;'>
+                <h3 style='color: #6c757d;'>🚧 Coming Soon! 🚧</h3>
+                <p style='color: #6c757d;'>We're working on adding this feature. Stay tuned for updates!</p>
+            </div>
+        """, unsafe_allow_html=True)                  
 
 if __name__ == "__main__":
     main()

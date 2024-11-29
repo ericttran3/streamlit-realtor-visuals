@@ -8,6 +8,8 @@ from typing import Dict, List, Tuple, Optional
 import warnings
 import numpy as np
 warnings.filterwarnings('ignore')  # Suppress warnings from Altair
+import streamlit_shadcn_ui as ui
+import dask.dataframe as dd
 
 # State to FIPS code mapping
 STATE_TO_FIPS = {
@@ -874,35 +876,44 @@ def create_metrics_view(df: pd.DataFrame, metric: str, title: str, comparison_ty
     return formatted_value, None, "off"
 
 
-def render_metrics_grid(metric_data: dict, display_name: str, comparison_type: str = "Value"):
-    """
-    Render a grid of metrics using Streamlit's metric component.
+def render_metrics_grid(metric_data: dict, display_name: str, comparison_type: str):
+    """Render the first 4 metrics in a grid."""
     
-    Parameters:
-    metric_data (dict): Dictionary containing DataFrames for each metric
-    display_name (str): Name of the selected geographic area
-    comparison_type (str): Type of comparison to show
-    """
-    cols = st.columns(2)
-    col_idx = 0
+    # Get first 4 metrics
+    current_metrics = METRICS[:4]
     
-    for metric, title in METRICS:
-        formatted_value, delta, delta_color = create_metrics_view(
-            metric_data[metric],
-            metric,
-            title,
-            comparison_type
-        )
-        
-        with cols[col_idx]:
-            st.metric(
-                label=title,
-                value=formatted_value,
-                delta=delta,
-                delta_color=delta_color
+    # Create columns for metrics
+    cols = st.columns(len(current_metrics))
+    
+    # Render metrics in columns
+    for metric_info, col in zip(current_metrics, cols):
+        metric, title = metric_info
+        with col:
+            formatted_value, delta, _ = create_metrics_view(
+                metric_data[metric],
+                metric,
+                title,
+                comparison_type
             )
-        
-        col_idx = (col_idx + 1) % 2
+            
+            latest_date = metric_data[metric]['date'].max()
+            
+            description = {
+                "Value": f"as of {latest_date.strftime('%B %Y')}",
+                "MoM": f"from last month" if delta else "no prior data",
+                "YoY": f"from last year" if delta else "no prior data",
+                "Since 2019": f"since 2019" if delta else "no 2019 data"
+            }.get(comparison_type)
+            
+            if comparison_type != "Value" and delta:
+                description = f"{delta} {description}"
+            
+            ui.card(
+                title=title,
+                content=formatted_value,
+                description=description,
+                key=f"card_{metric}"
+            ).render()
 
 
 def create_choropleth(
@@ -1141,9 +1152,9 @@ def handle_map_visualization(
 
 def render_overview():
     """Main overview rendering function"""
-    # Get DataLoader instance
     data_loader = st.session_state.data_loader
     
+    # First row: Geographic level radio buttons
     selected_geo_level = st.radio(
         "Geographic Level",
         options=["Country", "State", "Metro", "County", "Zip"],
@@ -1151,14 +1162,15 @@ def render_overview():
         label_visibility="collapsed"
     ).lower()
     
-    # Show coming soon message for Zip level and return early
-    if selected_geo_level == 'zip':
-        display_coming_soon()
-        return
-        
-    col1, col2, col3 = st.columns([3, 3, 5], gap="small")
-
+    # Second row: Area selection and comparison controls
+    col1, col2 = st.columns([1, 1])
+    
     with col1:
+        # Show coming soon message for Zip level and return early
+        if selected_geo_level == 'zip':
+            display_coming_soon()
+            return
+            
         # Load data using DataLoader
         df = data_loader.load_data(selected_geo_level)
         available_geos = data_loader.get_available_geos(selected_geo_level)
@@ -1167,7 +1179,8 @@ def render_overview():
             selected_geo = st.selectbox(
                 'Select Country',
                 options=['United States'],
-                disabled=True
+                disabled=True,
+                label_visibility="collapsed"
             )
             selected_id = data_loader.COUNTRY_MAPPING['United States']
             selected_geo = (str(selected_id), "United States")
@@ -1180,39 +1193,24 @@ def render_overview():
             selected_geo = st.selectbox(
                 f"Select {data_loader.GEO_MAPPINGS[selected_geo_level.title()]['display_name']}",
                 options=available_geos,
-                format_func=lambda x: x[1]
+                format_func=lambda x: x[1],
+                label_visibility="collapsed"
             )
             display_name = selected_geo[1]
             selected_id = selected_geo[0]
     
     with col2:
-        chart_type = st.selectbox(
-            "Chart Type",
-            options=["Time Series", "Seasonality", "Metrics", "Table", "Map"]
-        )
-    
-    with col3:
-        comparison_options = ["Value"] if chart_type == "Seasonality" else ["Value", "MoM", "YoY", "Since 2019"]
         comparison_type = st.segmented_control(
             "Comparison",
-            options=comparison_options,
-            default="Value"
+            options=["Value", "MoM", "YoY", "Since 2019", "Seasonality"],
+            default="Value",
+            label_visibility="collapsed",
+            key="comparison_segmented_control",
+            help="Select the type of comparison to display"
         )
 
     try:
-        if chart_type == "Map":
-            if selected_geo_level == 'zip':
-                display_coming_soon()
-                return
-            handle_map_visualization(
-                selected_geo_level,
-                display_name,
-                selected_id,
-                comparison_type
-            )
-            return
-
-        # Load data for other chart types using DataLoader
+        # Load data for all metrics
         metric_data = {}
         for metric, _ in METRICS:
             data = data_loader.get_metric_data(
@@ -1225,54 +1223,54 @@ def render_overview():
                 return
             metric_data[metric] = data
 
-        # Handle different chart types
-        if chart_type == "Table":
-            create_metrics_table(metric_data, display_name, comparison_type)
-            return
-        elif chart_type == "Metrics":
-            st.write(f"#### Current Metrics for {display_name} ({comparison_type})")
-            render_metrics_grid(
-                metric_data, 
-                display_name, 
-                comparison_type
-            )
-            st.markdown("---")
-            return
-
-        # Render regular charts (Time Series and Seasonality)
+        # Display sections
+        
+        # 1. Metrics Section
+        # st.markdown("##### Current Metrics")
+        render_metrics_grid(metric_data, display_name, comparison_type)
+        # st.markdown("---")
+        
+        # 2. Time Series Section
+        # st.markdown("##### Time Series")
+        
+        # Render Time Series charts
         for i in range(0, len(METRICS), 2):
             col1, col2 = st.columns(2, gap="small")
             
             # First chart
             metric, title = METRICS[i]
             with col1:
-                chart = None  # Initialize chart variable
-                if chart_type == "Time Series":
-                    if comparison_type == "Value":
-                        chart = create_area_chart(metric_data[metric], metric, title, display_name)
-                    else:
-                        chart = create_combo_chart(metric_data[metric], metric, title, display_name, comparison_type)
-                elif chart_type == "Seasonality":
+                chart = None
+                if comparison_type == "Seasonality":
                     chart = create_seasonality_chart(metric_data[metric], metric, title, display_name)
+                elif comparison_type == "Value":
+                    chart = create_area_chart(metric_data[metric], metric, title, display_name)
+                else:
+                    chart = create_combo_chart(metric_data[metric], metric, title, display_name, comparison_type)
                 
-                if chart:  # Only display if chart was created
+                if chart:
                     st.altair_chart(chart, use_container_width=True)
             
             # Second chart (if it exists)
             if i + 1 < len(METRICS):
                 metric, title = METRICS[i + 1]
                 with col2:
-                    chart = None  # Initialize chart variable
-                    if chart_type == "Time Series":
-                        if comparison_type == "Value":
-                            chart = create_area_chart(metric_data[metric], metric, title, display_name)
-                        else:
-                            chart = create_combo_chart(metric_data[metric], metric, title, display_name, comparison_type)
-                    elif chart_type == "Seasonality":
+                    chart = None
+                    if comparison_type == "Seasonality":
                         chart = create_seasonality_chart(metric_data[metric], metric, title, display_name)
+                    elif comparison_type == "Value":
+                        chart = create_area_chart(metric_data[metric], metric, title, display_name)
+                    else:
+                        chart = create_combo_chart(metric_data[metric], metric, title, display_name, comparison_type)
                     
-                    if chart:  # Only display if chart was created
+                    if chart:
                         st.altair_chart(chart, use_container_width=True)
+        
+        # st.markdown("---")
+        
+        # 3. Table Section
+        # st.markdown("### Detailed Metrics")
+        create_metrics_table(metric_data, display_name, comparison_type)
 
     except Exception as e:
         st.error(f"Error loading visualizations: {str(e)}")
@@ -1325,7 +1323,7 @@ def create_metrics_table(metric_data: dict, display_name: str, comparison_type: 
     latest_date = metric_data[list(metric_data.keys())[0]]['date'].max()
     
     # Display header with date
-    st.markdown(f"#### Current Metrics for {display_name} ({comparison_type})")
+    # st.markdown(f"##### Current Metrics for {display_name} ({comparison_type})")
     # st.markdown(f"*as of {latest_date.strftime('%B %Y')}*")
     
     # Initialize lists to store our data
@@ -1377,7 +1375,7 @@ def create_metrics_table(metric_data: dict, display_name: str, comparison_type: 
             row = {
                 'Metric': title,
                 'Current Value': formatted_value,
-                f'Previous Value ({comparison_type})': formatted_prev,
+                f'Previous Value': formatted_prev,
                 'Change': formatted_delta,
                 'Change (%)': pct_change
             }
@@ -1418,6 +1416,66 @@ def create_metrics_table(metric_data: dict, display_name: str, comparison_type: 
         
         # Apply the styling to both Change columns
         styled_df = df.style.applymap(color_change, subset=['Change', 'Change (%)'])
-        st.dataframe(styled_df, use_container_width=True)
+        st.dataframe(styled_df, use_container_width=True, hide_index=True)
     else:
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, use_container_width=True, hide_index=True)
+
+def render_support():
+    """Render the support form."""
+    st.markdown("### 🐛 Report a Bug or Request Support")
+    
+    # Add description
+    st.markdown("""
+        Please use this form to report any issues you encounter or request support. 
+        We'll get back to you as soon as possible.
+    """)
+    
+    # Create the form
+    with st.form("support_form"):
+        # Get user inputs
+        name = st.text_input("Name")
+        email = st.text_input("Email")
+        
+        # Issue type selector
+        issue_type = st.selectbox(
+            "Type of Issue",
+            ["Bug Report", "Feature Request", "Question", "Other"]
+        )
+        
+        # Description of the issue
+        description = st.text_area(
+            "Description",
+            placeholder="Please describe the issue in detail. If reporting a bug, include steps to reproduce it."
+        )
+        
+        # Optional: Add severity for bug reports
+        if issue_type == "Bug Report":
+            severity = st.select_slider(
+                "Severity",
+                options=["Low", "Medium", "High", "Critical"],
+                value="Medium"
+            )
+        
+        # Submit button
+        submitted = st.form_submit_button("Submit")
+        
+        if submitted:
+            if not name or not email or not description:
+                st.error("Please fill in all required fields.")
+            else:
+                # Here you would typically send this to your backend or email system
+                # For now, we'll just show a success message
+                st.success("Thank you for your submission! We'll get back to you soon.")
+                
+                # You could also display the submission details
+                st.write("Submission Details:")
+                details = {
+                    "Name": name,
+                    "Email": email,
+                    "Issue Type": issue_type,
+                    "Description": description
+                }
+                if issue_type == "Bug Report":
+                    details["Severity"] = severity
+                    
+                st.json(details)
