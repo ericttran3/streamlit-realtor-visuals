@@ -1161,7 +1161,7 @@ def handle_map_visualization(
 def render_overview():
     """Main overview rendering function"""
     # Load custom CSS
-    load_css('/Users/erictran/streamlit-realtor-visuals/src/assets/styles.css')
+    load_css('src/assets/styles.css')
 
     data_loader = st.session_state.data_loader
     
