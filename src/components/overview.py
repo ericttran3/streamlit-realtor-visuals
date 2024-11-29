@@ -10,6 +10,11 @@ import numpy as np
 warnings.filterwarnings('ignore')  # Suppress warnings from Altair
 import streamlit_shadcn_ui as ui
 import dask.dataframe as dd
+import os
+
+def load_css(css_file):
+    with open(css_file) as f:
+        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True) 
 
 # State to FIPS code mapping
 STATE_TO_FIPS = {
@@ -127,7 +132,7 @@ def load_geometries():
 def display_coming_soon():
     """Display a coming soon message with styling."""
     st.markdown("""
-        <div style='padding: 2rem; background-color: #f8f9fa; border-radius: 0.5rem; text-align: center;'>
+        <div style='padding: 10re; background-color: #f8f9fa; border-radius: 0.5rem; text-align: center;'>
             <h3 style='color: #6c757d;'>🚧 Coming Soon! 🚧</h3>
             <p style='color: #6c757d;'>We're working on adding this feature. Stay tuned for updates!</p>
         </div>
@@ -885,6 +890,9 @@ def render_metrics_grid(metric_data: dict, display_name: str, comparison_type: s
     # Create columns for metrics
     cols = st.columns(len(current_metrics))
     
+    # Treat Seasonality the same as Value
+    display_type = "Value" if comparison_type == "Seasonality" else comparison_type
+    
     # Render metrics in columns
     for metric_info, col in zip(current_metrics, cols):
         metric, title = metric_info
@@ -893,7 +901,7 @@ def render_metrics_grid(metric_data: dict, display_name: str, comparison_type: s
                 metric_data[metric],
                 metric,
                 title,
-                comparison_type
+                display_type
             )
             
             latest_date = metric_data[metric]['date'].max()
@@ -903,9 +911,9 @@ def render_metrics_grid(metric_data: dict, display_name: str, comparison_type: s
                 "MoM": f"from last month" if delta else "no prior data",
                 "YoY": f"from last year" if delta else "no prior data",
                 "Since 2019": f"since 2019" if delta else "no 2019 data"
-            }.get(comparison_type)
+            }.get(display_type)
             
-            if comparison_type != "Value" and delta:
+            if display_type != "Value" and delta:
                 description = f"{delta} {description}"
             
             ui.card(
@@ -1152,6 +1160,9 @@ def handle_map_visualization(
 
 def render_overview():
     """Main overview rendering function"""
+    # Load custom CSS
+    load_css('/Users/erictran/streamlit-realtor-visuals/src/assets/styles.css')
+
     data_loader = st.session_state.data_loader
     
     # First row: Geographic level radio buttons
@@ -1226,13 +1237,9 @@ def render_overview():
         # Display sections
         
         # 1. Metrics Section
-        # st.markdown("##### Current Metrics")
         render_metrics_grid(metric_data, display_name, comparison_type)
-        # st.markdown("---")
         
         # 2. Time Series Section
-        # st.markdown("##### Time Series")
-        
         # Render Time Series charts
         for i in range(0, len(METRICS), 2):
             col1, col2 = st.columns(2, gap="small")
@@ -1266,11 +1273,10 @@ def render_overview():
                     if chart:
                         st.altair_chart(chart, use_container_width=True)
         
-        # st.markdown("---")
-        
-        # 3. Table Section
-        # st.markdown("### Detailed Metrics")
-        create_metrics_table(metric_data, display_name, comparison_type)
+        # 3. Table Section - Only show if not in Seasonality view
+        # Move this outside the try block to completely skip it
+        if comparison_type not in ["Seasonality", "Value"]:
+            create_metrics_table(metric_data, display_name, comparison_type)
 
     except Exception as e:
         st.error(f"Error loading visualizations: {str(e)}")
@@ -1322,10 +1328,6 @@ def create_metrics_table(metric_data: dict, display_name: str, comparison_type: 
     # Get the latest date from any metric (they should all have the same latest date)
     latest_date = metric_data[list(metric_data.keys())[0]]['date'].max()
     
-    # Display header with date
-    # st.markdown(f"##### Current Metrics for {display_name} ({comparison_type})")
-    # st.markdown(f"*as of {latest_date.strftime('%B %Y')}*")
-    
     # Initialize lists to store our data
     rows = []
     
@@ -1337,6 +1339,11 @@ def create_metrics_table(metric_data: dict, display_name: str, comparison_type: 
         
         # Get previous value based on comparison type
         if comparison_type != "Value":
+            # Initialize prev_date and prev_value
+            prev_date = None
+            prev_value = None
+            
+            # Calculate prev_date based on comparison type
             if comparison_type == "MoM":
                 prev_date = latest_date - pd.DateOffset(months=1)
             elif comparison_type == "YoY":
@@ -1344,14 +1351,14 @@ def create_metrics_table(metric_data: dict, display_name: str, comparison_type: 
             elif comparison_type == "Since 2019":
                 prev_date = df[df['date'].dt.year == 2019]['date'].max()
             
-            prev_date = df['date'].where(df['date'] <= prev_date).max()
-            prev_value = df[df['date'] == prev_date][metric].iloc[0] if prev_date else None
+            # Get previous value if prev_date exists
+            if prev_date is not None:
+                prev_date = df['date'].where(df['date'] <= prev_date).max()
+                if prev_date is not None:
+                    prev_value = df[df['date'] == prev_date][metric].iloc[0]
             
             # Calculate raw delta
-            if prev_value and prev_value != 0:
-                raw_delta = latest_value - prev_value
-            else:
-                raw_delta = None
+            raw_delta = latest_value - prev_value if prev_value is not None else None
             
             # Format values
             formatted_value, pct_change, _ = create_metrics_view(
