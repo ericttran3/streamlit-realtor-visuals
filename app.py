@@ -3,7 +3,7 @@ import streamlit as st
 import streamlit_shadcn_ui as ui
 from src.data_loader import DataLoader
 from src.components.overview import render_overview, render_support
-from src.components.details import render_details
+# from src.components.details import render_details
 from src.config import GEO_LEVELS, GEO_MAPPINGS, STATE_TO_FIPS
 
 def main():
@@ -54,7 +54,13 @@ def main():
     
     # Details Tab
     with tab_details:
-        render_details()
+        # render_details()
+        st.markdown("""
+            <div style='padding: 2rem; background-color: #f8f9fa; border-radius: 0.5rem; text-align: center;'>
+                <h3 style='color: #6c757d;'>🚧 Coming Soon! 🚧</h3>
+                <p style='color: #6c757d;'>We're working on adding this feature. Stay tuned for updates!</p>
+            </div>
+        """, unsafe_allow_html=True)                
 
     
     # Compare Tab
