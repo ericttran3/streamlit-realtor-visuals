@@ -11,6 +11,7 @@ warnings.filterwarnings('ignore')  # Suppress warnings from Altair
 import streamlit_shadcn_ui as ui
 import dask.dataframe as dd
 import os
+import streamlit_antd_components as sac
 
 def load_css(css_file):
     with open(css_file) as f:
@@ -1170,11 +1171,12 @@ def render_overview():
         "Geographic Level",
         options=["Country", "State", "Metro", "County", "Zip"],
         horizontal=True,
-        label_visibility="collapsed"
+        label_visibility="collapsed",
+        key="geo_level_radio"
     ).lower()
     
     # Second row: Area selection and comparison controls
-    col1, col2 = st.columns([1, 1])
+    col1, col2 = st.columns([1, 2])
     
     with col1:
         # Show coming soon message for Zip level and return early
@@ -1237,10 +1239,12 @@ def render_overview():
         # Display sections
         
         # 1. Metrics Section
+        sac.divider(label='Metrics', icon='house', align='center', color='gray')
         render_metrics_grid(metric_data, display_name, comparison_type)
         
         # 2. Time Series Section
         # Render Time Series charts
+        sac.divider(label='Charts', icon='house', align='center', color='gray')
         for i in range(0, len(METRICS), 2):
             col1, col2 = st.columns(2, gap="small")
             
@@ -1272,11 +1276,12 @@ def render_overview():
                     
                     if chart:
                         st.altair_chart(chart, use_container_width=True)
-        
+
         # 3. Table Section - Only show if not in Seasonality view
-        # Move this outside the try block to completely skip it
-        if comparison_type not in ["Seasonality", "Value"]:
-            create_metrics_table(metric_data, display_name, comparison_type)
+        if comparison_type not in ["Seasonality"]:
+            sac.divider(label='Table', icon='house', align='center', color='gray')
+            create_metrics_table(metric_data, display_name, comparison_type)                                    
+    
 
     except Exception as e:
         st.error(f"Error loading visualizations: {str(e)}")
@@ -1323,109 +1328,92 @@ def validate_metric_data(df: pd.DataFrame, metric: str) -> Tuple[pd.DataFrame, O
     except Exception as e:
         return None, f"Error processing {metric}: {str(e)}"
 
-def create_metrics_table(metric_data: dict, display_name: str, comparison_type: str) -> pd.DataFrame:
-    """Create a table showing all metrics for the selected geography."""
-    # Get the latest date from any metric (they should all have the same latest date)
-    latest_date = metric_data[list(metric_data.keys())[0]]['date'].max()
-    
-    # Initialize lists to store our data
+def create_metrics_table(metric_data: dict, display_name: str, comparison_type: str) -> None:
+    """Create a table showing metrics and their changes."""
     rows = []
     
-    # Process each metric
     for metric, title in METRICS:
-        df = metric_data[metric]
-        latest_date = df['date'].max()
-        latest_value = df[df['date'] == latest_date][metric].iloc[0]
-        
-        # Get previous value based on comparison type
-        if comparison_type != "Value":
-            # Initialize prev_date and prev_value
-            prev_date = None
-            prev_value = None
+        if metric in metric_data:
+            df = metric_data[metric]
+            latest_date = df['date'].max()
+            latest_value = df[df['date'] == latest_date][metric].iloc[0]
             
-            # Calculate prev_date based on comparison type
-            if comparison_type == "MoM":
-                prev_date = latest_date - pd.DateOffset(months=1)
-            elif comparison_type == "YoY":
-                prev_date = latest_date - pd.DateOffset(years=1)
-            elif comparison_type == "Since 2019":
-                prev_date = df[df['date'].dt.year == 2019]['date'].max()
-            
-            # Get previous value if prev_date exists
-            if prev_date is not None:
-                prev_date = df['date'].where(df['date'] <= prev_date).max()
+            # Get previous value based on comparison type
+            if comparison_type != "Value":
+                # Calculate prev_date based on comparison type
+                if comparison_type == "MoM":
+                    prev_date = latest_date - pd.DateOffset(months=1)
+                elif comparison_type == "YoY":
+                    prev_date = latest_date - pd.DateOffset(years=1)
+                elif comparison_type == "Since 2019":
+                    prev_date = df[df['date'].dt.year == 2019]['date'].max()
+                
+                # Get previous value if prev_date exists
+                prev_value = None
                 if prev_date is not None:
-                    prev_value = df[df['date'] == prev_date][metric].iloc[0]
-            
-            # Calculate raw delta
-            raw_delta = latest_value - prev_value if prev_value is not None else None
-            
-            # Format values
-            formatted_value, pct_change, _ = create_metrics_view(
-                metric_data[metric],
-                metric,
-                title,
-                comparison_type
-            )
-            
-            # Format previous value and delta using the same formatting as current value
-            if 'price' in metric:
-                formatted_prev = f"${prev_value:,.0f}" if prev_value is not None else "N/A"
-                formatted_delta = f"${raw_delta:+,.0f}" if raw_delta is not None else "N/A"
-            elif metric == 'pending_ratio':
-                formatted_prev = f"{prev_value:.1f}%" if prev_value is not None else "N/A"
-                formatted_delta = f"{raw_delta:+.1f}%" if raw_delta is not None else "N/A"
+                    prev_date = df['date'].where(df['date'] <= prev_date).max()
+                    if prev_date is not None:
+                        prev_value = df[df['date'] == prev_date][metric].iloc[0]
+                
+                # Calculate raw delta
+                raw_delta = latest_value - prev_value if prev_value is not None else None
+                
+                # Format values
+                formatted_value, pct_change, _ = create_metrics_view(
+                    metric_data[metric],
+                    metric,
+                    title,
+                    comparison_type
+                )
+                
+                # Format values without HTML tags
+                if 'price' in metric:
+                    formatted_prev = f"${prev_value:,.0f}" if prev_value is not None else "N/A"
+                    formatted_delta = f"${raw_delta:+,.0f}" if raw_delta is not None else "N/A"
+                elif metric == 'pending_ratio':
+                    formatted_prev = f"{prev_value:.1f}%" if prev_value is not None else "N/A"
+                    formatted_delta = f"{raw_delta:+.1f}%" if raw_delta is not None else "N/A"
+                else:
+                    formatted_prev = f"{prev_value:,.0f}" if prev_value is not None else "N/A"
+                    formatted_delta = f"{raw_delta:+,.0f}" if raw_delta is not None else "N/A"
+                
+                # Format percentage change
+                if pct_change != "N/A":
+                    pct_change = f"{pct_change}"
+                
+                row = {
+                    "Metric": title,
+                    "Current Value": formatted_value,
+                    "Previous Value": formatted_prev,
+                    "Change": formatted_delta,
+                    "Change (%)": pct_change
+                }
             else:
-                formatted_prev = f"{prev_value:,.0f}" if prev_value is not None else "N/A"
-                formatted_delta = f"{raw_delta:+,.0f}" if raw_delta is not None else "N/A"
+                # Just show current value for "Value" comparison type
+                formatted_value, _, _ = create_metrics_view(
+                    metric_data[metric],
+                    metric,
+                    title,
+                    comparison_type
+                )
+                row = {
+                    "Metric": title,
+                    "Current Value": formatted_value
+                }
             
-            row = {
-                'Metric': title,
-                'Current Value': formatted_value,
-                f'Previous Value': formatted_prev,
-                'Change': formatted_delta,
-                'Change (%)': pct_change
-            }
-        else:
-            # Just show current value for "Value" comparison type
-            formatted_value, _, _ = create_metrics_view(
-                metric_data[metric],
-                metric,
-                title,
-                comparison_type
-            )
-            row = {
-                'Metric': title,
-                'Current Value': formatted_value
-            }
-            
-        rows.append(row)
+            rows.append(row)
     
     # Create DataFrame
     df = pd.DataFrame(rows)
     
-    # Display the table with styling
-    if comparison_type != "Value":
-        # Style both Change columns
-        def color_change(val):
-            if isinstance(val, str):
-                if val == "N/A":
-                    return ''
-                if '%' in val:
-                    value = float(val.strip('%+-'))
-                else:
-                    value = float(val.strip('$+').replace(',', ''))
-                if value > 0:
-                    return 'color: #52be80'  # Green for positive
-                elif value < 0:
-                    return 'color: #ec7063'  # Red for negative
-            return ''
-        
-        # Apply the styling to both Change columns
-        styled_df = df.style.applymap(color_change, subset=['Change', 'Change (%)'])
-        st.dataframe(styled_df, use_container_width=True, hide_index=True)
-    else:
-        st.dataframe(df, use_container_width=True, hide_index=True)
+    # Display using shadcn table
+    ui.table(
+        data=df,
+        maxHeight=300
+    )
+
+    
+    
 
 def render_support():
     """Render the support form."""
