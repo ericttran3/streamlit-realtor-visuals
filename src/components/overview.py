@@ -1338,6 +1338,39 @@ def validate_metric_data(df: pd.DataFrame, metric: str) -> Tuple[pd.DataFrame, O
 
 def create_metrics_table(metric_data: dict, display_name: str, comparison_type: str) -> None:
     """Create a table showing metrics and their changes."""
+    # Get the latest date from any metric (they should all have the same dates)
+    latest_date = None
+    for metric in metric_data:
+        if not metric_data[metric].empty:
+            latest_date = metric_data[metric]['date'].max()
+            break
+    
+    # Determine geo level from display_name format
+    geo_level = None
+    if ", " in display_name:  # County format: "County Name, STATE"
+        geo_level = "County"
+    elif "Metro" in display_name or "MSA" in display_name:  # Metro format
+        geo_level = "Metro Area"
+    elif len(display_name) == 2:  # State abbreviation
+        geo_level = "State"
+    elif display_name == "United States":
+        geo_level = "Country"
+    else:
+        geo_level = "Location"  # Default fallback
+    
+    # Create caption based on comparison type
+    if comparison_type == "Value":
+        caption = (
+            f"Table displaying the current values for {display_name} "
+            f"at the {geo_level} level as of {latest_date.strftime('%B %Y')}"
+        )
+    else:
+        caption = (
+            f"Table displaying the {comparison_type} comparison for {display_name} "
+            f"at the {geo_level} level as of {latest_date.strftime('%B %Y')}"
+        )
+    
+    
     rows = []
     
     for metric, title in METRICS:
@@ -1421,6 +1454,8 @@ def create_metrics_table(metric_data: dict, display_name: str, comparison_type: 
         data=df,
         maxHeight=300
     )
+    # Display the caption
+    st.write(caption)
 
 def format_value(value, metric):
     """Helper function to format values consistently"""
