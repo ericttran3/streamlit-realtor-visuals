@@ -40,8 +40,10 @@ def main():
     #     Analyze real estate trends across different geographic levels using weekly and monthly data from <a href="https://realtor.com/research/data" target="_blank" class="title-link">realtor.com</a>
     # """, unsafe_allow_html=True)
 
-    # ui.badges(badge_list=[("shadcn", "default"), ("in", "secondary"), ("streamlit", "destructive")], class_name="flex gap-2", key="main_badges1")
-    st.caption("Analyze real estate trends across different geographic levels using weekly and monthly data from realtor.com!")
+    ui.badges(badge_list=[("App", "default"), ("Updated through October 2024", "secondary"), ("streamlit", "destructive")], class_name="flex gap-2", key="main_badges1")
+    # ui.badges([("Updated through October 2024", "destructive")], class_name="flex gap-2", key="main_badges1")
+    # st.caption("Analyze real estate trends across different geographic levels using weekly and monthly data from realtor.com!")
+    st.caption("Explore dynamic real estate market trends across national, state, and local markets with the latest data from realtor.com")
     
     # Navigation tabs
     tab_overview, tab_details, tab_compare, tab_map, tab_analyze = st.tabs([
@@ -51,6 +53,10 @@ def main():
     # Overview Tab
     with tab_overview:
         render_overview()
+        footer_html = """<div style='text-align: center;'>
+            <p>Developed with ❤️  by Eric Tran</p>
+            </div>"""
+        st.markdown(footer_html, unsafe_allow_html=True)
     
     # Details Tab
     with tab_details:
@@ -102,6 +108,9 @@ def main():
     #             <p style='color: #6c757d;'>We're working on adding this feature. Stay tuned for updates!</p>
     #         </div>
     #     """, unsafe_allow_html=True)                  
+
+
+
 
 if __name__ == "__main__":
     main()
