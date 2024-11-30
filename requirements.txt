@@ -6,3 +6,4 @@ pytest>=7.0.0
 vega_datasets
 streamlit_shadcn_ui
 dask
+streamlit-antd-components
