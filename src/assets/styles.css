@@ -7,8 +7,20 @@ html {
     padding-top: 0rem;
 }
 
+.st-e2 {
+    min-height: 0rem;
+}
+
 .st-ca {
     padding-top: 0rem !important;
+}
+
+.st-ex {
+    row-gap: 0rem;
+}
+
+.st-cd {
+    flex-wrap: nowrap;
 }
 
 /* .st-d7 {

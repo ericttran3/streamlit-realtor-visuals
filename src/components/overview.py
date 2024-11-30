@@ -712,8 +712,8 @@ def create_combo_chart(df: pd.DataFrame, metric: str, title: str, geo_name: str,
         df = df.drop('previous', axis=1)
         
     # For debugging
-    print(f"Latest few rows for {metric}:")
-    print(df[['date', metric, 'comparison']].tail())
+    # print(f"Latest few rows for {metric}:")
+    # print(df[['date', metric, 'comparison']].tail())
     
     # Selection for hover interaction
     nearest = alt.selection_single(
@@ -1165,20 +1165,23 @@ def render_overview():
     load_css('src/assets/styles.css')
 
     data_loader = st.session_state.data_loader
-    
-    # First row: Geographic level radio buttons
-    selected_geo_level = st.radio(
-        "Geographic Level",
-        options=["Country", "State", "Metro", "County", "Zip"],
-        horizontal=True,
-        label_visibility="collapsed",
-        key="geo_level_radio"
-    ).lower()
-    
-    # Second row: Area selection and comparison controls
-    col1, col2 = st.columns([1, 2])
-    
+
+    # Create three columns for all controls
+    col1, col2, col3 = st.columns([1.5, 1.0, 1.5])
+
+    # Geographic level radio in first column
     with col1:
+        selected_geo_level = st.radio(
+            "Select Geographic Level",
+            options=["Country", "State", "Metro", "County", "Zip"],
+            horizontal=True,
+            # label_visibility="collapsed",
+            help="Toggle the geographic level to explore data at different levels of granularity",
+            key="geo_level_radio"
+        ).lower()
+    
+    # Area selection in second column
+    with col2:
         # Show coming soon message for Zip level and return early
         if selected_geo_level == 'zip':
             display_coming_soon()
@@ -1193,7 +1196,7 @@ def render_overview():
                 'Select Country',
                 options=['United States'],
                 disabled=True,
-                label_visibility="collapsed"
+                # label_visibility="collapsed"
             )
             selected_id = data_loader.COUNTRY_MAPPING['United States']
             selected_geo = (str(selected_id), "United States")
@@ -1203,21 +1206,26 @@ def render_overview():
                 st.error(f"No data available for {selected_geo_level}")
                 return
                 
+            # Get the count of available options
+            option_count = len(available_geos)
+
+            # Create the selectbox with count in the label
             selected_geo = st.selectbox(
-                f"Select {data_loader.GEO_MAPPINGS[selected_geo_level.title()]['display_name']}",
+                f"Select {data_loader.GEO_MAPPINGS[selected_geo_level.title()]['display_name']} ({option_count} available)",
                 options=available_geos,
                 format_func=lambda x: x[1],
-                label_visibility="collapsed"
+                # label_visibility="collapsed"
             )
             display_name = selected_geo[1]
             selected_id = selected_geo[0]
     
-    with col2:
+    # Comparison control in third column
+    with col3:
         comparison_type = st.segmented_control(
             "Comparison",
             options=["Value", "MoM", "YoY", "Since 2019", "Seasonality"],
             default="Value",
-            label_visibility="collapsed",
+            # label_visibility="collapsed",
             key="comparison_segmented_control",
             help="Select the type of comparison to display"
         )
@@ -1280,8 +1288,8 @@ def render_overview():
         # 3. Table Section - Only show if not in Seasonality view
         if comparison_type not in ["Seasonality"]:
             sac.divider(label='Table', icon='house', align='center', color='gray')
-            create_metrics_table(metric_data, display_name, comparison_type)                                    
-    
+            create_metrics_table(metric_data, display_name, comparison_type)
+            # st.caption(f"Data available through October 2024, {comparison_type} comparison")
 
     except Exception as e:
         st.error(f"Error loading visualizations: {str(e)}")
@@ -1346,74 +1354,85 @@ def create_metrics_table(metric_data: dict, display_name: str, comparison_type: 
                 elif comparison_type == "YoY":
                     prev_date = latest_date - pd.DateOffset(years=1)
                 elif comparison_type == "Since 2019":
-                    prev_date = df[df['date'].dt.year == 2019]['date'].max()
+                    # Get the same month from 2019
+                    prev_date = pd.Timestamp(year=2019, month=latest_date.month, day=1)
                 
-                # Get previous value if prev_date exists
+                # Get previous value
                 prev_value = None
                 if prev_date is not None:
-                    prev_date = df['date'].where(df['date'] <= prev_date).max()
-                    if prev_date is not None:
-                        prev_value = df[df['date'] == prev_date][metric].iloc[0]
+                    # For "Since 2019", get exact month match
+                    if comparison_type == "Since 2019":
+                        prev_data = df[
+                            (df['date'].dt.year == 2019) & 
+                            (df['date'].dt.month == latest_date.month)
+                        ]
+                    else:
+                        # For MoM and YoY, get closest previous date
+                        prev_data = df[df['date'] <= prev_date]
+                    
+                    if not prev_data.empty:
+                        prev_value = prev_data[metric].iloc[-1]
                 
                 # Calculate raw delta
                 raw_delta = latest_value - prev_value if prev_value is not None else None
                 
-                # Format values
-                formatted_value, pct_change, _ = create_metrics_view(
-                    metric_data[metric],
-                    metric,
-                    title,
-                    comparison_type
-                )
+                # Calculate percentage change
+                pct_change = ((latest_value - prev_value) / prev_value * 100) if prev_value is not None else None
                 
-                # Format values without HTML tags
-                if 'price' in metric:
+                # Format values based on metric type
+                price_metrics = ['median_listing_price', 'average_listing_price', 'median_listing_price_per_square_foot']
+                if metric in price_metrics:
+                    formatted_value = f"${latest_value:,.0f}"
                     formatted_prev = f"${prev_value:,.0f}" if prev_value is not None else "N/A"
-                    formatted_delta = f"${raw_delta:+,.0f}" if raw_delta is not None else "N/A"
+                    # Move plus/minus sign before dollar sign for changes
+                    formatted_delta = f"{'+' if raw_delta > 0 else '-'}${abs(raw_delta):,.0f}" if raw_delta is not None else "N/A"
                 elif metric == 'pending_ratio':
+                    formatted_value = f"{latest_value:.1f}%"
                     formatted_prev = f"{prev_value:.1f}%" if prev_value is not None else "N/A"
                     formatted_delta = f"{raw_delta:+.1f}%" if raw_delta is not None else "N/A"
                 else:
+                    formatted_value = f"{latest_value:,.0f}"
                     formatted_prev = f"{prev_value:,.0f}" if prev_value is not None else "N/A"
                     formatted_delta = f"{raw_delta:+,.0f}" if raw_delta is not None else "N/A"
                 
                 # Format percentage change
-                if pct_change != "N/A":
-                    pct_change = f"{pct_change}"
+                formatted_pct = f"{pct_change:+.1f}%" if pct_change is not None else "N/A"
                 
                 row = {
                     "Metric": title,
-                    "Current Value": formatted_value,
-                    "Previous Value": formatted_prev,
+                    f"{latest_date.strftime('%B %Y')}": formatted_value,
+                    f"{prev_date.strftime('%B %Y')}": formatted_prev,
                     "Change": formatted_delta,
-                    "Change (%)": pct_change
+                    "Change (%)": formatted_pct
                 }
             else:
                 # Just show current value for "Value" comparison type
-                formatted_value, _, _ = create_metrics_view(
-                    metric_data[metric],
-                    metric,
-                    title,
-                    comparison_type
-                )
+                formatted_value = format_value(latest_value, metric)
                 row = {
                     "Metric": title,
-                    "Current Value": formatted_value
+                    f"{latest_date.strftime('%B %Y')}": formatted_value
                 }
             
             rows.append(row)
     
-    # Create DataFrame
+    # Create DataFrame and display table
     df = pd.DataFrame(rows)
-    
-    # Display using shadcn table
     ui.table(
         data=df,
         maxHeight=300
     )
 
+def format_value(value, metric):
+    """Helper function to format values consistently"""
+    # List of metrics that should have dollar signs
+    price_metrics = ['median_listing_price', 'average_listing_price', 'median_listing_price_per_square_foot']
     
-    
+    if metric in price_metrics:
+        return f"${value:,.0f}"
+    elif metric == 'pending_ratio':
+        return f"{value:.1f}%"
+    else:
+        return f"{value:,.0f}"
 
 def render_support():
     """Render the support form."""
