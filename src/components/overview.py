@@ -10,7 +10,6 @@ import numpy as np
 warnings.filterwarnings('ignore')  # Suppress warnings from Altair
 import streamlit_shadcn_ui as ui
 import dask.dataframe as dd
-import os
 import streamlit_antd_components as sac
 
 def load_css(css_file):
@@ -1159,141 +1158,7 @@ def handle_map_visualization(
     except Exception as e:
         st.error(f"Error in map visualization: {str(e)}")
 
-def render_overview():
-    """Main overview rendering function"""
-    # Load custom CSS
-    load_css('src/assets/styles.css')
 
-    data_loader = st.session_state.data_loader
-
-    # Create three columns for all controls
-    col1, col2, col3 = st.columns([1.5, 1.0, 1.5])
-
-    # Geographic level radio in first column
-    with col1:
-        selected_geo_level = st.radio(
-            "Select Geographic Level",
-            options=["Country", "State", "Metro", "County", "Zip"],
-            horizontal=True,
-            # label_visibility="collapsed",
-            help="Toggle the geographic level to explore data at different levels of granularity",
-            key="geo_level_radio"
-        ).lower()
-    
-    # Area selection in second column
-    with col2:
-        # Show coming soon message for Zip level and return early
-        if selected_geo_level == 'zip':
-            display_coming_soon()
-            return
-            
-        # Load data using DataLoader
-        df = data_loader.load_data(selected_geo_level)
-        available_geos = data_loader.get_available_geos(selected_geo_level)
-        
-        if selected_geo_level == 'country':
-            selected_geo = st.selectbox(
-                'Select Country',
-                options=['United States'],
-                disabled=True,
-                # label_visibility="collapsed"
-            )
-            selected_id = data_loader.COUNTRY_MAPPING['United States']
-            selected_geo = (str(selected_id), "United States")
-            display_name = "United States"
-        else:
-            if not available_geos:
-                st.error(f"No data available for {selected_geo_level}")
-                return
-                
-            # Get the count of available options
-            option_count = len(available_geos)
-
-            # Create the selectbox with count in the label
-            selected_geo = st.selectbox(
-                f"Select {data_loader.GEO_MAPPINGS[selected_geo_level.title()]['display_name']} ({option_count} available)",
-                options=available_geos,
-                format_func=lambda x: x[1],
-                # label_visibility="collapsed"
-            )
-            display_name = selected_geo[1]
-            selected_id = selected_geo[0]
-    
-    # Comparison control in third column
-    with col3:
-        comparison_type = st.segmented_control(
-            "Comparison",
-            options=["Value", "MoM", "YoY", "Since 2019", "Seasonality"],
-            default="Value",
-            # label_visibility="collapsed",
-            key="comparison_segmented_control",
-            help="Select the type of comparison to display"
-        )
-
-    try:
-        # Load data for all metrics
-        metric_data = {}
-        for metric, _ in METRICS:
-            data = data_loader.get_metric_data(
-                selected_geo_level,
-                [selected_id],
-                metric
-            )
-            if len(data) == 0:
-                st.error(f"No data available for {display_name}")
-                return
-            metric_data[metric] = data
-
-        # Display sections
-        
-        # 1. Metrics Section
-        sac.divider(label='Metrics', icon='house', align='center', color='gray')
-        render_metrics_grid(metric_data, display_name, comparison_type)
-        
-        # 2. Time Series Section
-        # Render Time Series charts
-        sac.divider(label='Charts', icon='house', align='center', color='gray')
-        for i in range(0, len(METRICS), 2):
-            col1, col2 = st.columns(2, gap="small")
-            
-            # First chart
-            metric, title = METRICS[i]
-            with col1:
-                chart = None
-                if comparison_type == "Seasonality":
-                    chart = create_seasonality_chart(metric_data[metric], metric, title, display_name)
-                elif comparison_type == "Value":
-                    chart = create_area_chart(metric_data[metric], metric, title, display_name)
-                else:
-                    chart = create_combo_chart(metric_data[metric], metric, title, display_name, comparison_type)
-                
-                if chart:
-                    st.altair_chart(chart, use_container_width=True)
-            
-            # Second chart (if it exists)
-            if i + 1 < len(METRICS):
-                metric, title = METRICS[i + 1]
-                with col2:
-                    chart = None
-                    if comparison_type == "Seasonality":
-                        chart = create_seasonality_chart(metric_data[metric], metric, title, display_name)
-                    elif comparison_type == "Value":
-                        chart = create_area_chart(metric_data[metric], metric, title, display_name)
-                    else:
-                        chart = create_combo_chart(metric_data[metric], metric, title, display_name, comparison_type)
-                    
-                    if chart:
-                        st.altair_chart(chart, use_container_width=True)
-
-        # 3. Table Section - Only show if not in Seasonality view
-        if comparison_type not in ["Seasonality"]:
-            sac.divider(label='Table', icon='house', align='center', color='gray')
-            create_metrics_table(metric_data, display_name, comparison_type)
-            # st.caption(f"Data available through October 2024, {comparison_type} comparison")
-
-    except Exception as e:
-        st.error(f"Error loading visualizations: {str(e)}")
-        return
 
 def get_valid_domain(data: pd.DataFrame, metric: str, use_quantiles: bool = False) -> List[float]:
     """Get valid domain values for the color scale"""
@@ -1345,102 +1210,95 @@ def create_metrics_table(metric_data: dict, display_name: str, comparison_type: 
             latest_date = metric_data[metric]['date'].max()
             break
     
-    # Determine geo level from display_name format
+    # Determine geo level and create caption
     geo_level = None
-    if ", " in display_name:  # County format: "County Name, STATE"
+    if ", " in display_name:
         geo_level = "County"
-    elif "Metro" in display_name or "MSA" in display_name:  # Metro format
+    elif "Metro" in display_name or "MSA" in display_name:
         geo_level = "Metro Area"
-    elif len(display_name) == 2:  # State abbreviation
+    elif len(display_name) == 2:
         geo_level = "State"
     elif display_name == "United States":
         geo_level = "Country"
     else:
-        geo_level = "Location"  # Default fallback
-    
-    # Create caption based on comparison type
-    if comparison_type == "Value":
-        caption = (
-            f"Table displaying the current values for {display_name} "
-            f"at the {geo_level} level as of {latest_date.strftime('%B %Y')}"
-        )
-    else:
-        caption = (
-            f"Table displaying the {comparison_type} comparison for {display_name} "
-            f"at the {geo_level} level as of {latest_date.strftime('%B %Y')}"
-        )
-    
+        geo_level = "Location"
     
     rows = []
-    
     for metric, title in METRICS:
         if metric in metric_data:
             df = metric_data[metric]
             latest_date = df['date'].max()
             latest_value = df[df['date'] == latest_date][metric].iloc[0]
             
+            # Format the current value
+            format_str = get_metric_format(metric)
+            if format_str == '$,.0f':
+                formatted_value = f"${latest_value:,.0f}"
+            elif format_str == '.1f':
+                formatted_value = f"{latest_value:.1f}%"
+            else:
+                formatted_value = f"{latest_value:,.0f}"
+            
             # Get previous value based on comparison type
             if comparison_type != "Value":
-                # Calculate prev_date based on comparison type
-                if comparison_type == "MoM":
-                    prev_date = latest_date - pd.DateOffset(months=1)
-                elif comparison_type == "YoY":
-                    prev_date = latest_date - pd.DateOffset(years=1)
-                elif comparison_type == "Since 2019":
-                    # Get the same month from 2019
-                    prev_date = pd.Timestamp(year=2019, month=latest_date.month, day=1)
-                
-                # Get previous value
-                prev_value = None
-                if prev_date is not None:
-                    # For "Since 2019", get exact month match
-                    if comparison_type == "Since 2019":
-                        prev_data = df[
-                            (df['date'].dt.year == 2019) & 
-                            (df['date'].dt.month == latest_date.month)
-                        ]
-                    else:
-                        # For MoM and YoY, get closest previous date
-                        prev_data = df[df['date'] <= prev_date]
+                try:
+                    # Calculate prev_date based on comparison type
+                    if comparison_type == "MoM":
+                        prev_date = latest_date - pd.DateOffset(months=1)
+                        prev_date = df['date'].where(df['date'] <= prev_date).max()
+                    elif comparison_type == "YoY":
+                        prev_date = latest_date - pd.DateOffset(years=1)
+                        prev_date = df['date'].where(df['date'] <= prev_date).max()
+                    elif comparison_type == "Since 2019":
+                        prev_date = pd.Timestamp(year=2019, month=latest_date.month, day=1)
                     
-                    if not prev_data.empty:
-                        prev_value = prev_data[metric].iloc[-1]
-                
-                # Calculate raw delta
-                raw_delta = latest_value - prev_value if prev_value is not None else None
-                
-                # Calculate percentage change
-                pct_change = ((latest_value - prev_value) / prev_value * 100) if prev_value is not None else None
-                
-                # Format values based on metric type
-                price_metrics = ['median_listing_price', 'average_listing_price', 'median_listing_price_per_square_foot']
-                if metric in price_metrics:
-                    formatted_value = f"${latest_value:,.0f}"
-                    formatted_prev = f"${prev_value:,.0f}" if prev_value is not None else "N/A"
-                    # Move plus/minus sign before dollar sign for changes
-                    formatted_delta = f"{'+' if raw_delta > 0 else '-'}${abs(raw_delta):,.0f}" if raw_delta is not None else "N/A"
-                elif metric == 'pending_ratio':
-                    formatted_value = f"{latest_value:.1f}%"
-                    formatted_prev = f"{prev_value:.1f}%" if prev_value is not None else "N/A"
-                    formatted_delta = f"{raw_delta:+.1f}%" if raw_delta is not None else "N/A"
-                else:
-                    formatted_value = f"{latest_value:,.0f}"
-                    formatted_prev = f"{prev_value:,.0f}" if prev_value is not None else "N/A"
-                    formatted_delta = f"{raw_delta:+,.0f}" if raw_delta is not None else "N/A"
-                
-                # Format percentage change
-                formatted_pct = f"{pct_change:+.1f}%" if pct_change is not None else "N/A"
+                    # Get previous value with validation
+                    if prev_date is not None:
+                        prev_data = df[df['date'] == prev_date]
+                        if not prev_data.empty:
+                            prev_value = prev_data[metric].iloc[0]
+                            
+                            # Format values based on metric type
+                            if metric in ['median_listing_price', 'average_listing_price', 'median_listing_price_per_square_foot']:
+                                formatted_prev = f"${prev_value:,.0f}"
+                                raw_delta = latest_value - prev_value
+                                formatted_delta = f"{'+' if raw_delta > 0 else '-'}${abs(raw_delta):,.0f}"
+                                pct_change = ((latest_value - prev_value) / prev_value) * 100 if prev_value != 0 else float('nan')
+                            elif metric == 'pending_ratio':
+                                formatted_prev = f"{prev_value:.1f}%"
+                                raw_delta = latest_value - prev_value
+                                formatted_delta = f"{raw_delta:+.1f}%"
+                                pct_change = ((latest_value - prev_value) / prev_value) * 100 if prev_value != 0 else float('nan')
+                            else:
+                                formatted_prev = f"{prev_value:,.0f}"
+                                raw_delta = latest_value - prev_value
+                                formatted_delta = f"{raw_delta:+,.0f}"
+                                pct_change = ((latest_value - prev_value) / prev_value) * 100 if prev_value != 0 else float('nan')
+                            
+                            formatted_pct = f"{pct_change:+.1f}%" if not pd.isna(pct_change) else "N/A"
+                        else:
+                            formatted_prev = "N/A"
+                            formatted_delta = "N/A"
+                            formatted_pct = "N/A"
+                    else:
+                        formatted_prev = "N/A"
+                        formatted_delta = "N/A"
+                        formatted_pct = "N/A"
+                        
+                except Exception:
+                    formatted_prev = "N/A"
+                    formatted_delta = "N/A"
+                    formatted_pct = "N/A"
                 
                 row = {
                     "Metric": title,
                     f"{latest_date.strftime('%B %Y')}": formatted_value,
-                    f"{prev_date.strftime('%B %Y')}": formatted_prev,
+                    f"{prev_date.strftime('%B %Y') if prev_date else 'Previous'}": formatted_prev,
                     "Change": formatted_delta,
                     "Change (%)": formatted_pct
                 }
             else:
                 # Just show current value for "Value" comparison type
-                formatted_value = format_value(latest_value, metric)
                 row = {
                     "Metric": title,
                     f"{latest_date.strftime('%B %Y')}": formatted_value
@@ -1454,8 +1312,13 @@ def create_metrics_table(metric_data: dict, display_name: str, comparison_type: 
         data=df,
         maxHeight=300
     )
-    # Display the caption
-    st.write(caption)
+
+     # Create caption
+    caption = (
+        f"Table displaying the {comparison_type} comparison for {display_name} "
+        f"at the {geo_level} level as of {latest_date.strftime('%B %Y')}"
+    )
+    st.caption(caption)
 
 def format_value(value, metric):
     """Helper function to format values consistently"""
@@ -1528,3 +1391,214 @@ def render_support():
                     details["Severity"] = severity
                     
                 st.json(details)
+
+
+def render_overview():
+    """Main overview rendering function"""
+    # Load custom CSS
+    load_css('src/assets/styles.css')
+
+    data_loader = st.session_state.data_loader
+
+    # Create three columns for all controls
+    col1, col2, col3 = st.columns([1.5, 1.0, 1.5])
+
+    # Geographic level radio in first column
+    with col1:
+        selected_geo_level = st.radio(
+            "Select Geographic Level",
+            options=["Country", "State", "Metro", "County", "Zip"],
+            horizontal=True,
+            # label_visibility="collapsed",
+            help="Toggle the geographic level to explore data at different levels of granularity",
+            key="geo_level_radio"
+        ).lower()
+    
+    # Area selection in second column
+    with col2:
+        # Show coming soon message for Zip level and return early
+        if selected_geo_level == 'zip':
+            display_coming_soon()
+            return
+            
+        # Load data using DataLoader
+        df = data_loader.load_data(selected_geo_level)
+        available_geos = data_loader.get_available_geos(selected_geo_level)
+        
+        if selected_geo_level == 'country':
+            selected_geo = st.selectbox(
+                'Select Country',
+                options=['United States'],
+                # disabled=True,
+                # label_visibility="collapsed"
+            )
+            selected_id = data_loader.COUNTRY_MAPPING['United States']
+            selected_geo = (str(selected_id), "United States")
+            display_name = "United States"
+        else:
+            if not available_geos:
+                st.error(f"No data available for {selected_geo_level}")
+                return
+                
+            # Get the count of available options
+            option_count = len(available_geos)
+
+            # Create the selectbox with count in the label
+            selected_geo = st.selectbox(
+                f"Select {data_loader.GEO_MAPPINGS[selected_geo_level.title()]['display_name']} ({option_count} available)",
+                options=available_geos,
+                format_func=lambda x: x[1],
+                # label_visibility="collapsed"
+            )
+            display_name = selected_geo[1]
+            selected_id = selected_geo[0]
+    
+    # Comparison control in third column
+    with col3:
+        comparison_type = st.segmented_control(
+            "Comparison",
+            options=["Value", "MoM", "YoY", "Since 2019", "Seasonality"],
+            default="Value",
+            # label_visibility="collapsed",
+            key="comparison_segmented_control",
+            help="Select the type of comparison to display"
+        )
+
+    # with st.popover("Filters"):
+    #         # Geographic level radio
+    #         selected_geo_level = st.radio(
+    #             "Select Geographic Level",
+    #             options=["Country", "State", "Metro", "County", "Zip"],
+    #             horizontal=True,
+    #             help="Toggle the geographic level to explore data at different levels of granularity",
+    #             key="geo_level_radio"
+    #         ).lower()
+            
+    #         # Show coming soon message for Zip level and return early
+    #         if selected_geo_level == 'zip':
+    #             display_coming_soon()
+    #             return
+                
+    #         # Load data using DataLoader
+    #         df = data_loader.load_data(selected_geo_level)
+    #         available_geos = data_loader.get_available_geos(selected_geo_level)
+            
+    #         # Area selection
+    #         if selected_geo_level == 'country':
+    #             selected_geo = st.selectbox(
+    #                 'Select Country',
+    #                 options=['United States'],
+    #                 # disabled=True
+    #             )
+    #             selected_id = data_loader.COUNTRY_MAPPING['United States']
+    #             selected_geo = (str(selected_id), "United States")
+    #             display_name = "United States"
+    #         else:
+    #             if not available_geos:
+    #                 st.error(f"No data available for {selected_geo_level}")
+    #                 return
+                    
+    #             # Get the count of available options
+    #             option_count = len(available_geos)
+
+    #             # Create the selectbox with count in the label
+    #             selected_geo = st.selectbox(
+    #                 f"Select {data_loader.GEO_MAPPINGS[selected_geo_level.title()]['display_name']} ({option_count} available)",
+    #                 options=available_geos,
+    #                 format_func=lambda x: x[1]
+    #             )
+    #             display_name = selected_geo[1]
+    #             selected_id = selected_geo[0]
+            
+    #         # Comparison control
+    #         comparison_type = st.segmented_control(
+    #             "Comparison Type",
+    #             options=["Value", "MoM", "YoY", "Since 2019", "Seasonality"],
+    #             default="Value",
+    #             # horizontal=True,
+    #             # help="Select the type of comparison to display"
+    #         )
+            
+    #         # # Optional: Add an Apply button
+    #         # if st.button("Apply Filters"):
+    #         #     st.session_state.selected_geo_level = selected_geo_level
+    #         #     st.session_state.selected_geo = selected_geo
+    #         #     st.session_state.comparison_type = comparison_type
+    #         #     st.rerun()
+
+    # # Initialize session state if not exists
+    # if 'selected_geo_level' not in st.session_state:
+    #     st.session_state.selected_geo_level = 'country'
+    # if 'selected_geo' not in st.session_state:
+    #     st.session_state.selected_geo = ('1', 'United States')
+    # if 'comparison_type' not in st.session_state:
+    #     st.session_state.comparison_type = 'Value'
+
+    try:
+        # Load data for all metrics
+        metric_data = {}
+        for metric, _ in METRICS:
+            data = data_loader.get_metric_data(
+                selected_geo_level,
+                [selected_id],
+                metric
+            )
+            if len(data) == 0:
+                st.error(f"No data available for {display_name}")
+                return
+            metric_data[metric] = data
+
+        # Display sections
+        
+        # 1. Metrics Section
+        with st.expander("Metrics", expanded=True):
+            # sac.divider(label='Metrics', align='center', color='gray')
+            # sac.divider(label='Metrics', icon='house', align='center', color='gray')
+            render_metrics_grid(metric_data, display_name, comparison_type)
+        
+        # 2. Time Series Section
+        # Render Time Series charts
+        with st.expander("Charts", expanded=True):
+            # sac.divider(label='Charts', icon='house', align='center', color='gray')
+            for i in range(0, len(METRICS), 2):
+                col1, col2 = st.columns(2, gap="small")
+                
+                # First chart
+                metric, title = METRICS[i]
+                with col1:
+                    chart = None
+                    if comparison_type == "Seasonality":
+                        chart = create_seasonality_chart(metric_data[metric], metric, title, display_name)
+                    elif comparison_type == "Value":
+                        chart = create_area_chart(metric_data[metric], metric, title, display_name)
+                    else:
+                        chart = create_combo_chart(metric_data[metric], metric, title, display_name, comparison_type)
+                    
+                    if chart:
+                        st.altair_chart(chart, use_container_width=True)
+                
+                # Second chart (if it exists)
+                if i + 1 < len(METRICS):
+                    metric, title = METRICS[i + 1]
+                    with col2:
+                        chart = None
+                        if comparison_type == "Seasonality":
+                            chart = create_seasonality_chart(metric_data[metric], metric, title, display_name)
+                        elif comparison_type == "Value":
+                            chart = create_area_chart(metric_data[metric], metric, title, display_name)
+                        else:
+                            chart = create_combo_chart(metric_data[metric], metric, title, display_name, comparison_type)
+                        
+                        if chart:
+                            st.altair_chart(chart, use_container_width=True)
+
+        # 3. Table Section - Only show if not in Seasonality view
+        if comparison_type not in ["Seasonality"]:
+            with st.expander("Table", expanded=True):
+                # sac.divider(label='Table', icon='house', align='center', color='gray')
+                create_metrics_table(metric_data, display_name, comparison_type)
+                # st.caption(f"Data available through October 2024, {comparison_type} comparison")
+
+    except Exception as e:
+        st.error(f"Error loading visualizations: {str(e)}")
+        return
