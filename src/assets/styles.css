@@ -1,3 +1,11 @@
+.block-container {
+    max-width: 1000px;
+    padding-top: 3rem;
+    padding-bottom: 3rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
 html {
     font-size: 14px;
 }
@@ -94,6 +102,13 @@ p, ol, ul, dl {
     gap: 0.5rem;
 }
 
+.st-emotion-cache-1clstc5 {
+    padding-top: 0.5rem;
+    padding-bottom: 0rem;
+    padding-left: 0rem;
+    padding-right: 0rem;
+}
+
 .st-emotion-cache-1sbzx8r {
     width: 328px;
     position: relative;
@@ -110,6 +125,15 @@ p, ol, ul, dl {
     flex: 1 1 0%;
     flex-direction: column;
     gap: 0.5rem;
+}
+
+.st-emotion-cache-p5msec {
+    position: relative;
+    display: flex;
+    width: 100%;
+    font-size: 14px;
+    padding: 0rem 0rem;
+    list-style-type: none;
 }
 
 .st-emotion-cache-1g9he0z {
@@ -193,4 +217,14 @@ p, ol, ul, dl {
     max-width: 100%;
     color: rgb(255, 75, 75);
     z-index: 1;
+}
+
+.st-emotion-cache-1h9usn1 {
+    margin-bottom: 0px;
+    margin-top: 0px;
+    width: 100%;
+    border-style: none;
+    border-width: 1px;
+    border-color: rgba(49, 51, 63, 0.2);
+    border-radius: 0.5rem;
 }
