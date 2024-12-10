@@ -6,6 +6,7 @@ pytest>=7.0.0
 vega_datasets
 streamlit_shadcn_ui
 dask
+streamlit_searchbox
 streamlit-antd-components
 streamlit-folium
 folium
