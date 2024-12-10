@@ -4,8 +4,8 @@ streamlit==1.40.1
 numpy>=1.24.0
 pytest>=7.0.0
 vega_datasets
-streamlit_shadcn_ui
 dask
+streamlit_shadcn_ui
 streamlit_searchbox
 streamlit-antd-components
 streamlit-folium

@@ -19,7 +19,7 @@ from src.data.data_loader import (
 from src.config import STYLE_OVERRIDES
 
 
-def main():
+def overview_page():
     """Main details page rendering function"""
     # Header section with icon and title
     st.markdown(
@@ -305,5 +305,5 @@ def main():
             return
 
 if __name__ == "__main__":
-    main()
+    overview_page()
 
