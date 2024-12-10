@@ -1,7 +1,17 @@
-# Streamlit Realtor.com Data Visualizer
+# Streamlit Realtor Visuals
 
 ## Overview
 An interactive data visualization application built with Streamlit that provides insights into real estate market trends using publicly available data from realtor.com/research/data. The app aggregates and visualizes data across multiple geographic levels including national, state, metro, county, and ZIP code regions.
+
+All data is sourced from [realtor.com/research/data](https://realtor.com/research/data), providing comprehensive real estate market metrics including:
+- Median listing prices
+- Active listing counts
+- Days on market
+- New listings
+- Price changes
+- Pending sales
+- Price per square foot
+- And more...
 
 ## Features
 
@@ -16,27 +26,33 @@ An interactive data visualization application built with Streamlit that provides
   - Changes since 2019
   - Seasonality patterns
 
-## Technology Stack
+### 🗺️ Geographic Coverage
+- National level trends
+- State-by-state analysis
+- Metro area insights
+- County-level data
+- ZIP code specific metrics
 
-### Core Technologies
-- Python
-- Streamlit
-- Altair
-- Folium
-- Pandas
-- Dask (for large dataset handling)
+### 📈 Key Metrics
+- Median listing prices
+- Active listing counts
+- Days on market
+- New listings
+- Price changes
+- Pending sales
+- Price per square foot
+- And more...
 
-### Enhanced UI Components
-- streamlit_shadcn_ui
-- streamlit_searchbox
-- streamlit-antd-components
-- streamlit-folium
+## Getting Started
 
-## Installation
+### Prerequisites
+- Python 3.8+
+- pip package manager
+
+### Installation
 
 1. Clone the repository:
 ```
-bash
 git clone https://github.com/yourusername/streamlit-realtor-visuals.git
 cd streamlit-realtor-visuals
 ```
@@ -51,22 +67,21 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
+### Demo
+```
+TODO: Add demo
+```
+
+## Usage Examples
+```
+TODO: Add usage examples
+```
+
 ## Upcoming Features
 - Enhanced interactive mapping capabilities using Folium
 - ChatAI integration for natural language data queries
 - Additional visualization options
 - Mobile-responsive design improvements
-
-## Data Source
-All data is sourced from [realtor.com/research/data](https://realtor.com/research/data), providing comprehensive real estate market metrics including:
-- Median listing prices
-- Active listing counts
-- Days on market
-- New listings
-- Price changes
-- Pending sales
-- Price per square foot
-- And more...
 
 ## Contributing
 Feedback, bug reports, and contributions are welcome! Please feel free to:
