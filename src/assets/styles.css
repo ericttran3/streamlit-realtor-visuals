@@ -10,7 +10,7 @@ html {
     font-size: 14px;
 }
 
-/* Padding above radio buttons */
+/* 
 .st-cb {
     padding-top: 0rem;
 }
@@ -30,10 +30,6 @@ html {
 .st-cd {
     flex-wrap: nowrap;
 }
-
-/* .st-d7 {
-    padding-left: 6px;
-} */
 
 .st-eo {
     padding-left: 6px;
@@ -228,3 +224,60 @@ p, ol, ul, dl {
     border-color: rgba(49, 51, 63, 0.2);
     border-radius: 0.5rem;
 }
+
+.st-emotion-cache-1dml9bh {
+    position: relative;
+    display: flex;
+    flex: 1 1 0%;
+    flex-direction: column;
+    gap: 0rem;
+}
+
+.st-emotion-cache-ue6h4q {
+    font-size: 14px;
+    color: rgb(49, 51, 63);
+    display: flex;
+    visibility: visible;
+    margin-bottom: 0rem;
+    height: auto;
+    min-height: 0rem;
+    vertical-align: middle;
+    flex-direction: row;
+    -webkit-box-align: center;
+    align-items: center;
+}
+
+.st-emotion-cache-g1uz1f {
+    width: 484.672px;
+    position: relative;
+    display: flex;
+    flex: 1 1 0%;
+    flex-direction: column;
+    gap: 0rem;
+}
+
+
+.st-emotion-cache-qzuz7e {
+    width: 241.672px;
+    position: relative;
+    display: flex;
+    flex: 1 1 0%;
+    flex-direction: column;
+    gap: 0rem;
+}
+
+.st-emotion-cache-t3um4n {
+    position: relative;
+    display: flex;
+    flex: 1 1 0%;
+    flex-direction: column;
+    gap: 0rem;
+}
+
+.st-emotion-cache-10dvyqu {
+    position: relative;
+    display: flex;
+    flex: 1 1 0%;
+    flex-direction: column;
+    gap: 0rem;
+} */

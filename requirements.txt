@@ -7,3 +7,5 @@ vega_datasets
 streamlit_shadcn_ui
 dask
 streamlit-antd-components
+streamlit-folium
+folium
