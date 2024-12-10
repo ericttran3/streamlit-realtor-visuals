@@ -55,7 +55,7 @@ def compare_page():
         "State - California",
         "County - Los Angeles, CA",
         "Metro - Los Angeles-Long Beach-Anaheim, CA",
-        "Zip - 90210, Beverly Hills, CA"
+        # "Zip - 90210, Beverly Hills, CA"
     ]
     
     # Create a container for multi-select and filters

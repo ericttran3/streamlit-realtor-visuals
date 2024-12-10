@@ -17,9 +17,9 @@ with open('src/assets/styles.css') as f:
     st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
 
 # Now import other modules
-from tools.overview import main as overview_main
+from tools.overview import overview_page
 from tools.compare import compare_page  # Make sure this matches your compare.py function name
-from tools.map import render_map_view as map_main
+from tools.map import map_page
 st.logo("src/assets/buildings.svg")
 
 
@@ -48,10 +48,10 @@ def placeholder_about():
     st.write("Coming soon...")
 
 # Create pages with unique titles
-overview = st.Page(overview_main, title="Overview", icon=":material/search:", default=True)
+overview = st.Page(overview_page, title="Overview", icon=":material/search:", default=True)
 compare = st.Page(compare_page, title="Compare", icon=":material/history:")  # Updated to match the function name
 map = st.Page(placeholder_map, title="Map", icon=":material/map:")
-chat = st.Page(placeholder_chat, title="Chat", icon=":material/chat:")
+chat = st.Page(placeholder_chat, title="Chat AI", icon=":material/chat:")
 # map_page = st.Page(map_main, title="Map", icon=":material/map:")
 
 notifications = st.Page(placeholder_notifications, title="Notifications", icon=":material/notification_important:")

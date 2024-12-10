@@ -5,15 +5,13 @@ from streamlit_folium import st_folium
 import pandas as pd
 from src.data.data_loader import METRICS, load_dask_data
 
-__all__ = ['render_map_view']
-
 def format_metric_value(value):
     if isinstance(value, (int, float)):
         return f"{value:,.0f}"
     else:
         return str(value)
 
-def render_map_view():
+def map_page():
     # Header section with icon and title
     st.markdown(
         """
